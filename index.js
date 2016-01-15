@@ -2,6 +2,7 @@ var Botkit = require('botkit');
 var controller = Botkit.slackbot();
 var http = require('http');
 
+// Env
 require('dotenv').load();
 
 var bot = controller.spawn({
@@ -9,10 +10,10 @@ var bot = controller.spawn({
 });
 
 var heyyou = {
-  clientId: CLIENT_ID, // TEMP This should be dynamic
+  clientId: process.env.CLIENT_ID, // TEMP This should be dynamic
   api: {
-    host: API_HOST,
-    pathPrefix: API_PATH_PREFIX
+    host: process.env.API_HOST,
+    pathPrefix: process.env.API_PATH_PREFIX
   }
 };
 
@@ -108,6 +109,55 @@ function getMenuByVenueId(venueId, callback) {
   }).end();
 }
 
+function getMenuMessage(venueId, result) {
+  return 'Menu for ' + venueId + ' is: ' + buildMenu(result);
+}
+
+function order(venueId, productId, callback) {
+  // API options
+  //var postData = qs.stringify({
+  var postData = {
+    "nonce": process.env.NONCE,
+    "venueId": parseInt(venueId),
+    "serviceType": "takeaway",
+    "items": [{"id": parseInt(productId)}],
+    "orderNote": "Submitted with HEYYOU Slack BOT"
+  };
+
+  var options = {
+    host: heyyou.api.host,
+    headers: {
+      'x-btq-client-id': heyyou.clientId,
+      Authorization: process.env.AUTH_CODE,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      //'Content-Length': postData.length
+    },
+    path: heyyou.api.pathPrefix + '/orders/submit',
+    method: 'POST'
+  };
+
+  // API call
+  var req = http.request(options, function(res) {
+    var body = '';
+
+    res.on('data', function (chunk) {
+      // Get the response data
+      body += chunk;
+    }).on('end', function(){
+      var response = JSON.parse(body);
+      callback(response);
+    });
+  });
+
+  req.on('error', function(e) {
+    console.log('problem with request: ' + e.message);
+  })
+
+  postData = JSON.stringify(postData, null, 4);
+
+  req.write(postData);
+  req.end();
+}
 // controller.hears(["help","^pattern$"],["direct_message","direct_mention","mention","ambient"],function(bot,message, a, b, c) {
 //   bot.reply(message,'Hi');
 //   bot.reply(message,'Do you want to order? Ask me `heyyou postcode=` followed by your POSTCODE number to get a list of venues near you');
@@ -126,20 +176,20 @@ function getMenuByVenueId(venueId, callback) {
 //   }
 // });
 
-function getMenuMessage(venueId, result) {
-  return 'Menu for ' + venueId + ' is: ' + buildMenu(result);
-}
+// controller.hears(["menu id=","^pattern$"],["direct_message","direct_mention","mention","ambient"],function(bot,message) {
+//   var venueId = getValueFromPattern(message.text);
 
-controller.hears(["menu id=","^pattern$"],["direct_message","direct_mention","mention","ambient"],function(bot,message) {
-  var venueId = getValueFromPattern(message.text);
+//   if (venueId) {
+//     getMenuByVenueId(venueId, function(result){
+//       bot.reply(message, getMenuMessage(venueId, result));
+//     });
+//   } else {
+//     bot.reply(message, 'Oops - Make sure to add the Venue ID, for example `heyyou menu id=16`');
+//   }
+// });
 
-  if (venueId) {
-    getMenuByVenueId(venueId, function(result){
-      bot.reply(message, getMenuMessage(venueId, result));
-    });
-  } else {
-    bot.reply(message, 'Oops - Make sure to add the Venue ID, for example `heyyou menu id=16`');
-  }
+controller.hears(['hi', 'hello', '^pattern$'],['direct_mention', 'mention'],function(bot,message) {
+  bot.reply(message, 'Hi, I\'m the HeyYouBOT :hey:\n\nTo get started type *order start*');
 });
 
 controller.hears(['order start'],['ambient'],function(bot,message) {
@@ -147,15 +197,43 @@ controller.hears(['order start'],['ambient'],function(bot,message) {
 });
 
 askWhen = function(response, convo) {
-  convo.ask("When would you like to order?", function(response, convo) {
-    convo.sayFirst('Got it! You want to order ' + response.text);
-    askPostcode(response, convo);
+  convo.ask("_*When* would you like to order?_ For example type *now* or *in 10 minutes*", function(response, convo) {
+    askVenueIdPrePostcode(response, convo);
     convo.next();
   }, {key:'when'});
 }
 
+askVenueIdPrePostcode = function(response, convo) {
+  convo.ask("_Do you already know the *ID* of the *Venue* you want to order from?_", [
+    {
+      pattern: bot.utterances.yes,
+      callback: function(response,convo) {
+        askVenueId(response, convo);
+        convo.next();
+      }
+    },
+    {
+      pattern: bot.utterances.no,
+      callback: function(response,convo) {
+        // No
+        askPostcode(response, convo);
+        convo.next();
+      }
+    },
+    {
+      default: true,
+      callback: function(response,convo) {
+        // just repeat the question
+        convo.repeat();
+        convo.sayFirst('Sorry, I didn\' get that. Please say *yes* or *no* :smile:');
+        convo.next();
+      }
+    }
+  ]);
+}
+
 askPostcode = function(response, convo) {
-  convo.ask("What is your Postcode?", function(response, convo) {
+  convo.ask("_What is your *Postcode*?_", function(response, convo) {
     getVenueByPostcode(response.text, function(result){
       convo.sayFirst(result);
     });
@@ -167,12 +245,10 @@ askPostcode = function(response, convo) {
 }
 
 askVenueId = function(response, convo) {
-  convo.ask("What Venue ID do you want to order from?", function(response, convo) {
+  convo.ask("_What *Venue ID* do you want to order from?_", function(response, convo) {
     // Print Venue's Menu
     getMenuByVenueId(response.text, function(result){
-      convo.sayFirst("Perfect.");
       convo.sayFirst(getMenuMessage(response.text, result));
-      convo.sayFirst(result);
     });
     setTimeout(function () {
       askProductId(response, convo);
@@ -182,11 +258,17 @@ askVenueId = function(response, convo) {
 }
 
 askProductId = function(response, convo) { 
-  convo.ask("So what Product ID do you want?", function(response, convo) {
-    convo.say("Ok!");
-    convo.say("You want to order " + convo.extractResponse('when') + " from Venue " + convo.extractResponse('venueId'));
-    convo.say("I'm ordering: " + convo.extractResponse('productId'));
+  convo.ask("_What *Product ID* do you want to order?_", function(response, convo) {
+    var venueId = convo.extractResponse('venueId');
+    var productId = convo.extractResponse('productId');
+    //var venue = getVenueByID(convo.extractResponse('venueId'));
+    var venueName = 'Venue ID ' + convo.extractResponse('venueId');
+    convo.sayFirst("I'm ordering " + convo.extractResponse('productId') + ", " + convo.extractResponse('when') + ", from " + venueName);
+    order(venueId, productId, function(result){
+      console.log(result);
+      convo.say('You order has been successfully submitted and it will be ready soon. You order ID is ' + result.orderId);
+      convo.say('\nBye :wave:');
+    });
     convo.next();
-    // convo.responses.productId
   }, {key:'productId'});
 }
