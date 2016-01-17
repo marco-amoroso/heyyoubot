@@ -264,11 +264,12 @@ askProductId = function(response, convo) {
 
     //var venue = getVenueByID(convo.extractResponse('venueId'));
     var venueName = 'Venue ID ' + venueId;
-    convo.say("\nI'm ordering " + productId + ", " + when + ", from " + venueName);
+    convo.say("\nI'm ordering Product ID " + productId + ", " + when + ", from " + venueName);
 
     // Order
     order(venueId, productId, function(result){
-      convo.say('\nYou order has been successfully submitted and it will be ready soon. You order ID is ' + result.orderId);
+      convo.say('\nYou order has been successfully submitted and it will be ready soon.');
+      convo.say('\nYou order ID is ' + result.orderId);
       convo.say('\nBye :wave:');
       convo.next();
     });
