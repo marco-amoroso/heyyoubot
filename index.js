@@ -157,41 +157,11 @@ function order(venueId, productId, callback) {
   req.end();
 }
 
-// controller.hears(["help","^pattern$"],["direct_message","direct_mention","mention","ambient"],function(bot,message, a, b, c) {
-//   bot.reply(message,'Hi');
-//   bot.reply(message,'Do you want to order? Ask me `heyyou postcode=` followed by your POSTCODE number to get a list of venues near you');
-//   bot.reply(message,'Do you want to see their menus? Ask me `heyyou menu id=` followed by the Venue ID number, for example `heyyou menu id=16`');
-// });
-
-// controller.hears(["postcode=","^pattern$"],["direct_message","direct_mention","mention","ambient"],function(bot,message) {
-//   var postcode = getValueFromPattern(message.text);
-
-//   if (postcode) {
-//     getVenueByPostcode(postcode, function(result){
-//       bot.reply(message, result);
-//     });
-//   } else {
-//     bot.reply(message, 'Oops - Make sure to add the correct postcode, for example for 2000 type `heyyou postcode=2000`');
-//   }
-// });
-
-// controller.hears(["menu id=","^pattern$"],["direct_message","direct_mention","mention","ambient"],function(bot,message) {
-//   var venueId = getValueFromPattern(message.text);
-
-//   if (venueId) {
-//     getMenuByVenueId(venueId, function(result){
-//       bot.reply(message, getMenuMessage(venueId, result));
-//     });
-//   } else {
-//     bot.reply(message, 'Oops - Make sure to add the Venue ID, for example `heyyou menu id=16`');
-//   }
-// });
-
-controller.hears(['hi', 'hello', 'hey', '^pattern$'],['direct_mention', 'mention'],function(bot,message) {
+controller.hears(['hi', 'hello', 'hey', '^pattern$'],['direct_message', 'mention'],function(bot,message) {
   bot.reply(message, '\nHi, I\'m the HeyYouBOT\n\nTo get started type *order start*\n');
 });
 
-controller.hears(['order start'],['ambient'],function(bot,message) {
+controller.hears(['order start'],['direct_message', 'ambient'],function(bot,message) {
   bot.startConversation(message, askWhen);
 });
 
@@ -262,7 +232,6 @@ askProductId = function(response, convo) {
     var productId = convo.extractResponse('productId');
     var when = convo.extractResponse('when');
 
-    //var venue = getVenueByID(convo.extractResponse('venueId'));
     var venueName = 'Venue ID ' + venueId;
     convo.say("\nI'm ordering Product ID " + productId + ", " + when + ", from " + venueName);
 

@@ -1,7 +1,10 @@
 ### HeyYou SlackBOT
 
-#### Env
-Remane `sample.env` to just `.env` and add your Enviroment variables
+#### Add a new integration in your company's Slack Account
+Docs: https://api.slack.com/bot-users
+
+#### Env info
+Remane `sample.env` to just `.env` and add your Enviroment variables. The `BOT_TOKEN` gets generated in the previous step
 
 #### Install dependencies
 `npm install`
@@ -10,7 +13,7 @@ Remane `sample.env` to just `.env` and add your Enviroment variables
 `node index.js`
 
 #### Slack
-Invite the bot in your room with `@heyyoubot`
+Once the NodeJS server is running you can simply go in a 1-1 room with `@heyyoubot` or invite the BOT into a slack room (e.g. `#general`) and start the ordering process by typing **order start** or just say hi with **hi @heyyoubot** to get instructions.
 
 ##### Screenshots
 

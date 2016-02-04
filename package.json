@@ -11,6 +11,6 @@
   "dependencies": {
     "botkit": "0.0.5",
     "dotenv": "^1.2.0",
-    "http": "0.0.0",
+    "http": "0.0.0"
   }
 }
